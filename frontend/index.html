@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CodeVector — Product Browser</title>
+    <meta name="description" content="Browse 200,000 products with fast cursor-based pagination" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <style>
+        /* ── Reset ─────────────────────────────────────────── */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        /* ── Theme Palette ─────────────────────────────────── */
+        :root {
+            --dark:       #323642;
+            --dark-light: #3e4350;
+            --green:      #81BD4A;
+            --green-dim:  rgba(129, 189, 74, 0.15);
+            --green-glow: rgba(129, 189, 74, 0.25);
+            --cream:      #E5E3DA;
+            --warm-gray:  #CFCDC4;
+            --bg:         #f5f4f0;
+            --white:      #ffffff;
+            --text:       #323642;
+            --text-dim:   #6b6d75;
+            --radius:     14px;
+            --radius-sm:  8px;
+            --shadow-sm:  0 1px 3px rgba(50, 54, 66, 0.06);
+            --shadow:     0 4px 20px rgba(50, 54, 66, 0.08);
+            --shadow-lg:  0 8px 32px rgba(50, 54, 66, 0.12);
+            --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        /* ── Top Navigation Bar ────────────────────────────── */
+        .navbar {
+            background: var(--dark);
+            padding: 0 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 64px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 12px rgba(50, 54, 66, 0.15);
+        }
+
+        .navbar .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        .navbar .logo-icon {
+            width: 32px;
+            height: 32px;
+            background: var(--green);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 1rem;
+            color: var(--white);
+        }
+
+        .navbar .logo-text {
+            font-weight: 700;
+            font-size: 1.15rem;
+            color: var(--white);
+            letter-spacing: -0.02em;
+        }
+
+        .navbar .logo-text span {
+            color: var(--green);
+        }
+
+        .navbar-stats {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .stat-pill {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.8rem;
+            color: var(--warm-gray);
+        }
+
+        .stat-pill .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--green);
+            animation: pulse-dot 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        /* ── Container ─────────────────────────────────────── */
+        .container {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+
+        /* ── Page Header ───────────────────────────────────── */
+        .page-header {
+            margin-bottom: 1.75rem;
+        }
+
+        .page-header h1 {
+            font-size: 1.75rem;
+            font-weight: 800;
+            color: var(--dark);
+            letter-spacing: -0.03em;
+            margin-bottom: 0.25rem;
+        }
+
+        .page-header p {
+            color: var(--text-dim);
+            font-size: 0.9rem;
+        }
+
+        /* ── Controls Bar ──────────────────────────────────── */
+        .controls {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 1.75rem;
+        }
+
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: var(--white);
+            border: 1.5px solid var(--cream);
+            border-radius: var(--radius);
+            padding: 0.5rem 0.75rem;
+            transition: border-color var(--transition);
+        }
+
+        .filter-group:focus-within {
+            border-color: var(--green);
+            box-shadow: 0 0 0 3px var(--green-dim);
+        }
+
+        .filter-group label {
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            white-space: nowrap;
+        }
+
+        .filter-group select {
+            background: transparent;
+            color: var(--text);
+            border: none;
+            font-family: inherit;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            outline: none;
+            padding-right: 0.5rem;
+        }
+
+        .controls .spacer { flex: 1; }
+
+        .results-badge {
+            font-size: 0.82rem;
+            padding: 0.45rem 1rem;
+            border-radius: 20px;
+            background: var(--green-dim);
+            color: #4a8a1e;
+            font-weight: 600;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* ── Product Grid ──────────────────────────────────── */
+        .product-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1rem;
+        }
+
+        /* ── Product Card ──────────────────────────────────── */
+        .product-card {
+            background: var(--white);
+            border: 1.5px solid var(--cream);
+            border-radius: var(--radius);
+            padding: 1.25rem 1.35rem;
+            transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
+            cursor: default;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .product-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--green);
+            opacity: 0;
+            transition: opacity var(--transition);
+        }
+
+        .product-card:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-lg);
+            border-color: var(--warm-gray);
+        }
+
+        .product-card:hover::before {
+            opacity: 1;
+        }
+
+        .product-card .card-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 0.85rem;
+        }
+
+        .product-card .name {
+            font-weight: 600;
+            font-size: 0.95rem;
+            line-height: 1.35;
+            color: var(--dark);
+            flex: 1;
+            margin-right: 0.75rem;
+        }
+
+        .product-card .price {
+            font-weight: 800;
+            font-size: 1.15rem;
+            color: var(--green);
+            white-space: nowrap;
+            letter-spacing: -0.02em;
+        }
+
+        .product-card .card-bottom {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .category-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            font-size: 0.73rem;
+            font-weight: 600;
+            padding: 0.25rem 0.65rem;
+            border-radius: 6px;
+            background: var(--green-dim);
+            color: #4a8a1e;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .date-text {
+            font-size: 0.78rem;
+            color: var(--warm-gray);
+            font-weight: 500;
+        }
+
+        /* ── Load More ─────────────────────────────────────── */
+        .load-more-wrapper {
+            text-align: center;
+            margin-top: 2.5rem;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 2.25rem;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-family: inherit;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all var(--transition);
+            letter-spacing: -0.01em;
+        }
+
+        .btn-primary {
+            background: var(--dark);
+            color: var(--white);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .btn-primary:hover {
+            background: var(--dark-light);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        .btn:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+            transform: none !important;
+            box-shadow: none;
+        }
+
+        /* ── Spinner ───────────────────────────────────────── */
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2.5px solid rgba(255, 255, 255, 0.25);
+            border-top-color: var(--white);
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ── Skeleton Cards ────────────────────────────────── */
+        .skeleton-card {
+            background: var(--white);
+            border: 1.5px solid var(--cream);
+            border-radius: var(--radius);
+            padding: 1.25rem 1.35rem;
+            animation: shimmer 1.8s ease-in-out infinite;
+        }
+
+        .skeleton-line {
+            height: 13px;
+            border-radius: 4px;
+            background: var(--cream);
+            margin-bottom: 0.75rem;
+        }
+
+        .skeleton-line.short  { width: 35%; }
+        .skeleton-line.medium { width: 60%; }
+        .skeleton-line.long   { width: 85%; }
+
+        @keyframes shimmer {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* ── Empty / Error ─────────────────────────────────── */
+        .status-message {
+            text-align: center;
+            padding: 4rem 1rem;
+            color: var(--text-dim);
+            font-size: 0.95rem;
+        }
+
+        .status-message .icon {
+            font-size: 2.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        /* ── Footer ────────────────────────────────────────── */
+        .footer {
+            text-align: center;
+            padding: 2rem 1rem;
+            margin-top: 2rem;
+            font-size: 0.8rem;
+            color: var(--warm-gray);
+        }
+
+        .footer a {
+            color: var(--green);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        /* ── Responsive ────────────────────────────────────── */
+        @media (max-width: 640px) {
+            .navbar { padding: 0 1rem; }
+            .container { padding: 1.25rem 1rem; }
+            .product-grid { grid-template-columns: 1fr; }
+            .page-header h1 { font-size: 1.35rem; }
+            .navbar-stats { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="logo">
+            <div class="logo-icon">CV</div>
+            <div class="logo-text">Code<span>Vector</span></div>
+        </div>
+        <div class="navbar-stats">
+            <div class="stat-pill">
+                <span class="dot"></span>
+                <span id="navbar-count">200,000 products</span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- Page Header -->
+        <div class="page-header">
+            <h1>Product Catalog</h1>
+            <p>Browse all products — newest first, with real-time stable pagination</p>
+        </div>
+
+        <!-- Controls -->
+        <div class="controls">
+            <div class="filter-group">
+                <label for="category-select">Category</label>
+                <select id="category-select">
+                    <option value="">All</option>
+                </select>
+            </div>
+            <div class="spacer"></div>
+            <span class="results-badge" id="page-info">0 loaded</span>
+        </div>
+
+        <!-- Product Grid -->
+        <div class="product-grid" id="product-grid"></div>
+
+        <!-- Load More -->
+        <div class="load-more-wrapper" id="load-more-wrapper">
+            <button class="btn btn-primary" id="load-more-btn" style="display: none;">
+                Load More
+            </button>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            Cursor-based pagination · <a href="/docs" target="_blank">API Docs</a>
+        </div>
+    </div>
+
+    <script>
+        // ── Config ──────────────────────────────────────────
+        const API_BASE = window.location.origin;
+        const PAGE_SIZE = 20;
+
+        // ── State ───────────────────────────────────────────
+        let nextCursor  = null;
+        let isLoading   = false;
+        let totalShown  = 0;
+        let currentCategory = "";
+
+        // ── DOM refs ────────────────────────────────────────
+        const grid           = document.getElementById("product-grid");
+        const loadMoreBtn    = document.getElementById("load-more-btn");
+        const categorySelect = document.getElementById("category-select");
+        const pageInfo       = document.getElementById("page-info");
+
+        // ── Helpers ─────────────────────────────────────────
+        function formatPrice(price) {
+            return "$" + Number(price).toFixed(2);
+        }
+
+        function formatDate(iso) {
+            return new Date(iso).toLocaleDateString("en-US", {
+                month: "short", day: "numeric", year: "numeric"
+            });
+        }
+
+        function escapeHtml(str) {
+            const el = document.createElement("div");
+            el.textContent = str;
+            return el.innerHTML;
+        }
+
+        function renderSkeletons(count = 8) {
+            let html = "";
+            for (let i = 0; i < count; i++) {
+                html += `
+                    <div class="skeleton-card">
+                        <div class="skeleton-line long"></div>
+                        <div class="skeleton-line medium"></div>
+                        <div class="skeleton-line short"></div>
+                    </div>`;
+            }
+            return html;
+        }
+
+        function renderProduct(p) {
+            return `
+                <div class="product-card">
+                    <div class="card-top">
+                        <span class="name">${escapeHtml(p.name)}</span>
+                        <span class="price">${formatPrice(p.price)}</span>
+                    </div>
+                    <div class="card-bottom">
+                        <span class="category-tag">${escapeHtml(p.category)}</span>
+                        <span class="date-text">${formatDate(p.created_at)}</span>
+                    </div>
+                </div>`;
+        }
+
+        function updatePageInfo() {
+            pageInfo.textContent = `${totalShown.toLocaleString()} loaded`;
+        }
+
+        // ── API calls ───────────────────────────────────────
+        async function fetchCategories() {
+            try {
+                const res  = await fetch(`${API_BASE}/api/categories`);
+                const json = await res.json();
+                json.data.forEach(cat => {
+                    const opt = document.createElement("option");
+                    opt.value = cat;
+                    opt.textContent = cat;
+                    categorySelect.appendChild(opt);
+                });
+            } catch (err) {
+                console.error("Failed to load categories:", err);
+            }
+        }
+
+        async function fetchProducts(reset = false) {
+            if (isLoading) return;
+            isLoading = true;
+
+            if (reset) {
+                grid.innerHTML = renderSkeletons();
+                nextCursor = null;
+                totalShown = 0;
+            }
+
+            loadMoreBtn.disabled = true;
+            loadMoreBtn.innerHTML = '<span class="spinner"></span> Loading…';
+
+            const params = new URLSearchParams({ limit: PAGE_SIZE });
+            if (currentCategory) params.set("category", currentCategory);
+            if (nextCursor) {
+                params.set("cursor_created_at", nextCursor.created_at);
+                params.set("cursor_id", nextCursor.id);
+            }
+
+            try {
+                const res  = await fetch(`${API_BASE}/api/products?${params}`);
+                const json = await res.json();
+
+                if (reset) grid.innerHTML = "";
+
+                if (json.data.length === 0 && totalShown === 0) {
+                    grid.innerHTML = `
+                        <div class="status-message" style="grid-column: 1/-1;">
+                            <div class="icon">📦</div>
+                            <p>No products found in this category.</p>
+                        </div>`;
+                    loadMoreBtn.style.display = "none";
+                } else {
+                    json.data.forEach(p => {
+                        grid.insertAdjacentHTML("beforeend", renderProduct(p));
+                    });
+                    totalShown += json.data.length;
+                }
+
+                nextCursor = json.next_cursor;
+                loadMoreBtn.style.display = json.has_next ? "inline-flex" : "none";
+                loadMoreBtn.innerHTML = "Load More";
+                loadMoreBtn.disabled = false;
+                updatePageInfo();
+            } catch (err) {
+                console.error("Failed to load products:", err);
+                if (totalShown === 0) {
+                    grid.innerHTML = `
+                        <div class="status-message" style="grid-column: 1/-1;">
+                            <div class="icon">⚠️</div>
+                            <p>Could not connect to the API. Make sure the server is running.</p>
+                        </div>`;
+                }
+                loadMoreBtn.innerHTML = "Retry";
+                loadMoreBtn.disabled = false;
+            } finally {
+                isLoading = false;
+            }
+        }
+
+        // ── Events ──────────────────────────────────────────
+        loadMoreBtn.addEventListener("click", () => fetchProducts(false));
+
+        categorySelect.addEventListener("change", (e) => {
+            currentCategory = e.target.value;
+            fetchProducts(true);
+        });
+
+        // ── Init ────────────────────────────────────────────
+        (async function init() {
+            await fetchCategories();
+            await fetchProducts(true);
+        })();
+    </script>
+</body>
+</html>
