@@ -441,7 +441,16 @@
         </div>
 
         <!-- Product Grid -->
-        <div class="product-grid" id="product-grid"></div>
+        <div class="product-grid" id="product-grid">
+            <div class="skeleton-card"><div class="skeleton-line long"></div><div class="skeleton-line medium"></div><div class="skeleton-line short"></div></div>
+            <div class="skeleton-card"><div class="skeleton-line long"></div><div class="skeleton-line medium"></div><div class="skeleton-line short"></div></div>
+            <div class="skeleton-card"><div class="skeleton-line long"></div><div class="skeleton-line medium"></div><div class="skeleton-line short"></div></div>
+            <div class="skeleton-card"><div class="skeleton-line long"></div><div class="skeleton-line medium"></div><div class="skeleton-line short"></div></div>
+            <div class="skeleton-card"><div class="skeleton-line long"></div><div class="skeleton-line medium"></div><div class="skeleton-line short"></div></div>
+            <div class="skeleton-card"><div class="skeleton-line long"></div><div class="skeleton-line medium"></div><div class="skeleton-line short"></div></div>
+            <div class="skeleton-card"><div class="skeleton-line long"></div><div class="skeleton-line medium"></div><div class="skeleton-line short"></div></div>
+            <div class="skeleton-card"><div class="skeleton-line long"></div><div class="skeleton-line medium"></div><div class="skeleton-line short"></div></div>
+        </div>
 
         <!-- Load More -->
         <div class="load-more-wrapper" id="load-more-wrapper">
@@ -560,6 +569,9 @@
                 grid.innerHTML = renderSkeletons();
                 nextCursor = null;
                 totalShown = 0;
+            } else {
+                // Append skeletons at the bottom during Load More
+                grid.insertAdjacentHTML("beforeend", renderSkeletons(4).replace(/skeleton-card/g, "skeleton-card load-more-skeleton"));
             }
 
             loadMoreBtn.disabled = true;
@@ -575,7 +587,11 @@
             try {
                 const json = await fetchWithRetry(`${API_BASE}/api/products?${params}`);
 
-                if (reset) grid.innerHTML = "";
+                if (reset) {
+                    grid.innerHTML = "";
+                } else {
+                    document.querySelectorAll('.load-more-skeleton').forEach(el => el.remove());
+                }
 
                 if (json.data.length === 0 && totalShown === 0) {
                     grid.innerHTML = `
@@ -597,6 +613,7 @@
                 loadMoreBtn.disabled = false;
                 updatePageInfo();
             } catch (err) {
+                if (!reset) document.querySelectorAll('.load-more-skeleton').forEach(el => el.remove());
                 console.error("Failed to load products:", err);
                 if (totalShown === 0) {
                     grid.innerHTML = `
