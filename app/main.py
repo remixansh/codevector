@@ -1,5 +1,6 @@
 """FastAPI application entry point."""
 
+import logging
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -7,6 +8,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
 from app.routes.products import router as products_router
+
+logging.basicConfig(level=logging.INFO)
 
 app = FastAPI(
     title="CodeVector Product Browser",
@@ -28,6 +31,12 @@ app.include_router(products_router)
 # Resolve the frontend directory relative to this file, so it works
 # regardless of the working directory (local dev vs Render vs Docker).
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
+
+
+@app.get("/health")
+def health_check():
+    """Health check for Render — keeps the service awake if pinged."""
+    return {"status": "ok"}
 
 
 @app.get("/", include_in_schema=False)

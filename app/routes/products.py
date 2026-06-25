@@ -1,11 +1,14 @@
 """Product listing endpoints with cursor-based pagination."""
 
+import logging
 from typing import Optional
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, HTTPException, Query
 
 from app.db import get_supabase
 from app.schemas import CategoriesResponse, Cursor, Product, ProductsResponse
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api", tags=["products"])
 
@@ -30,42 +33,50 @@ def list_products(
     Uses keyset (cursor-based) pagination so results stay stable even when
     new products are inserted while the user is browsing.
     """
-    client = get_supabase()
+    try:
+        client = get_supabase()
 
-    # Request limit + 1 rows to detect whether a next page exists,
-    # without needing an expensive COUNT(*) query.
-    params = {
-        "p_cursor_created_at": cursor_created_at,
-        "p_cursor_id": cursor_id,
-        "p_category": category,
-        "p_limit": limit + 1,
-    }
+        # Request limit + 1 rows to detect whether a next page exists,
+        # without needing an expensive COUNT(*) query.
+        params = {
+            "p_cursor_created_at": cursor_created_at,
+            "p_cursor_id": cursor_id,
+            "p_category": category,
+            "p_limit": limit + 1,
+        }
 
-    response = client.rpc("get_products_page", params).execute()
-    rows = response.data
+        response = client.rpc("get_products_page", params).execute()
+        rows = response.data
 
-    # Determine if there are more results beyond this page.
-    has_next = len(rows) > limit
-    if has_next:
-        rows = rows[:limit]
+        # Determine if there are more results beyond this page.
+        has_next = len(rows) > limit
+        if has_next:
+            rows = rows[:limit]
 
-    # Build the cursor for the next page from the last returned row.
-    next_cursor = None
-    if has_next and rows:
-        last = rows[-1]
-        next_cursor = Cursor(created_at=last["created_at"], id=last["id"])
+        # Build the cursor for the next page from the last returned row.
+        next_cursor = None
+        if has_next and rows:
+            last = rows[-1]
+            next_cursor = Cursor(created_at=last["created_at"], id=last["id"])
 
-    return ProductsResponse(
-        data=[Product(**row) for row in rows],
-        next_cursor=next_cursor,
-        has_next=has_next,
-    )
+        return ProductsResponse(
+            data=[Product(**row) for row in rows],
+            next_cursor=next_cursor,
+            has_next=has_next,
+        )
+    except Exception as e:
+        logger.error("Error fetching products: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/categories", response_model=CategoriesResponse)
 def list_categories():
     """Return all distinct product categories for the filter dropdown."""
-    client = get_supabase()
-    response = client.rpc("get_categories").execute()
-    categories = [row["category"] for row in response.data]
-    return CategoriesResponse(data=categories)
+    try:
+        client = get_supabase()
+        response = client.rpc("get_categories").execute()
+        categories = [row["category"] for row in response.data]
+        return CategoriesResponse(data=categories)
+    except Exception as e:
+        logger.error("Error fetching categories: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))

@@ -521,11 +521,26 @@
             pageInfo.textContent = `${totalShown.toLocaleString()} loaded`;
         }
 
+        // ── Retry helper (handles Render free-tier cold starts) ──
+        async function fetchWithRetry(url, retries = 3) {
+            for (let attempt = 1; attempt <= retries; attempt++) {
+                const res = await fetch(url);
+                if (res.ok) return await res.json();
+                // Render returns 404 during cold start — retry after a delay
+                if ((res.status === 404 || res.status >= 500) && attempt < retries) {
+                    const delay = attempt * 2000; // 2s, 4s
+                    console.warn(`Attempt ${attempt} got ${res.status}, retrying in ${delay}ms...`);
+                    await new Promise(r => setTimeout(r, delay));
+                    continue;
+                }
+                throw new Error(`API returned ${res.status}`);
+            }
+        }
+
         // ── API calls ───────────────────────────────────────
         async function fetchCategories() {
             try {
-                const res  = await fetch(`${API_BASE}/api/categories`);
-                const json = await res.json();
+                const json = await fetchWithRetry(`${API_BASE}/api/categories`);
                 json.data.forEach(cat => {
                     const opt = document.createElement("option");
                     opt.value = cat;
@@ -558,8 +573,7 @@
             }
 
             try {
-                const res  = await fetch(`${API_BASE}/api/products?${params}`);
-                const json = await res.json();
+                const json = await fetchWithRetry(`${API_BASE}/api/products?${params}`);
 
                 if (reset) grid.innerHTML = "";
 
@@ -588,9 +602,10 @@
                     grid.innerHTML = `
                         <div class="status-message" style="grid-column: 1/-1;">
                             <div class="icon">⚠️</div>
-                            <p>Could not connect to the API. Make sure the server is running.</p>
+                            <p>Server is waking up — please click Retry in a few seconds.</p>
                         </div>`;
                 }
+                loadMoreBtn.style.display = "inline-flex";
                 loadMoreBtn.innerHTML = "Retry";
                 loadMoreBtn.disabled = false;
             } finally {
