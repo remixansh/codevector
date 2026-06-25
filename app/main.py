@@ -1,8 +1,10 @@
 """FastAPI application entry point."""
 
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 
 from app.routes.products import router as products_router
 
@@ -20,8 +22,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Register API routes.
+# Register API routes FIRST — these must take priority.
 app.include_router(products_router)
 
-# Serve the bonus frontend at /
-app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
+# Resolve the frontend directory relative to this file, so it works
+# regardless of the working directory (local dev vs Render vs Docker).
+FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
+
+
+@app.get("/", include_in_schema=False)
+def serve_frontend():
+    """Serve the bonus UI at the root path."""
+    return FileResponse(FRONTEND_DIR / "index.html")
